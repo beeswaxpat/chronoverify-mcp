@@ -1,8 +1,8 @@
 {
   "name": "chronoverify-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "mcpName": "io.github.beeswaxpat/chronoverify",
-  "description": "MCP server for ChronoVerify: verify a photo's capture time and provenance from any MCP-compatible AI agent.",
+  "description": "MCP server for ChronoVerify: verify a photo's capture time and provenance (C2PA, EXIF, pixel forensics) and fetch a signed audit report, from any MCP-compatible AI agent.",
   "type": "module",
   "bin": {
     "chronoverify-mcp": "dist/index.js"
