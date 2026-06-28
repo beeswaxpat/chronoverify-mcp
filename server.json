@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.beeswaxpat/chronoverify",
+  "description": "Verify a photo's capture time and provenance: reads C2PA Content Credentials, EXIF and XMP metadata, and classical pixel forensics, fused into one verdict (provenance_confirmed, consistent, inconclusive, metadata_anomaly, manipulation_indicated) with a 0 to 100 confidence. Works on any image, signed or not. Provenance-first, not a deepfake detector.",
+  "repository": {
+    "url": "https://github.com/beeswaxpat/chronoverify-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://chronoverify.com",
+  "version": "0.1.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "chronoverify-mcp",
+      "version": "0.1.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your ChronoVerify API key (cv_live_...). Optional: omit to use the free, rate-limited public path.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "CHRONOVERIFY_API_KEY"
+        }
+      ]
+    }
+  ]
+}
