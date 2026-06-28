@@ -83,11 +83,11 @@ function summarize(r: Record<string, any>): string {
   return lines.join("\n");
 }
 
-const server = new McpServer({ name: "chronoverify", version: "0.1.2" });
+const server = new McpServer({ name: "chronoverify", version: "0.1.3" });
 
 server.tool(
   "verify_image",
-  "Verify whether a photo is authentic: when it was captured, on what device, and whether it shows signs of editing or AI generation. Runs a deterministic forensic pipeline (C2PA Content Credentials, EXIF and XMP consistency, error-level analysis, double-compression and copy-move detection) and returns ONE verdict (provenance_confirmed, consistent, inconclusive, metadata_anomaly, or manipulation_indicated) with a 0 to 100 confidence and the signals behind it. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. Provenance-first, not a deepfake-only detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64.",
+  "Verify a photo's capture time and provenance: when it was captured, on what device, whether it carries valid C2PA Content Credentials, and whether it shows signs of editing. Runs a deterministic pipeline (cryptographic C2PA Content Credentials validation against the official trust lists, EXIF and XMP metadata consistency, and classical pixel forensics such as error-level and noise analysis) and returns ONE verdict (provenance_confirmed, consistent, inconclusive, metadata_anomaly, or manipulation_indicated) with a 0 to 100 confidence and the signals behind it. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. It validates provenance and is NOT a deepfake or AI-generation detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64.",
   {
     url: z.string().optional().describe("A publicly reachable image URL; the server fetches it."),
     file_path: z.string().optional().describe("Absolute path to a local image file to verify."),
