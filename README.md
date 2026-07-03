@@ -36,6 +36,8 @@ Verify a photo's capture time and provenance. Takes exactly one of:
 - `file_path`: an absolute path to a local image, or
 - `image_base64`: base64-encoded image bytes.
 
+Optionally set `permalink: true` to also store the verdict (never the image) and get back an unlisted, shareable link to it in the `permalink` field, for citing the result to people or in reports. Keyless links expire after 90 days; links minted with an API key do not expire.
+
 It returns a human-readable summary **and** a typed structured object so an agent can branch on the result without parsing prose:
 
 ```json
@@ -64,6 +66,7 @@ It returns a human-readable summary **and** a typed structured object so an agen
     "height": 800,
     "c2pa_validator_enabled": true
   },
+  "permalink": null,
   "limits": "ChronoVerify returns investigative triage, not proof.",
   "source": "ChronoVerify (https://chronoverify.com)"
 }
@@ -79,13 +82,14 @@ The verdict enum:
 
 ### `get_signed_report`
 
-Generate a signed, timestamped PDF audit report for one image: the chain-of-custody / compliance record (for example an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail). Takes one of `file_path` or `image_base64` (this endpoint does not fetch URLs) and an optional `out_path`. Writes the PDF and returns the path. **Requires** `CHRONOVERIFY_API_KEY`; metered as a premium report unit. The report carries an Ed25519 signature you can verify against the public key at `https://chronoverify.com/v1/key`.
+Generate a signed PDF audit report for one image: the chain-of-custody / compliance record (for example an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail). Takes one of `file_path` or `image_base64` (this endpoint does not fetch URLs) and an optional `out_path`. Writes the PDF and returns the path. **Requires** `CHRONOVERIFY_API_KEY`; metered as a premium report unit. The report carries an Ed25519 signature you can verify against the public key at `https://chronoverify.com/v1/key`.
 
 ## Example prompts
 
 - "Verify the provenance of /Users/me/Downloads/photo.jpg"
 - "When was the photo at this URL taken, and has it been edited? https://example.com/photo.jpg"
 - "Validate the C2PA Content Credentials on this image and tell me the signer."
+- "Verify this photo and give me a shareable link to the verdict."
 - "Generate a signed provenance report for ./evidence/claim-001.jpg and save it to ./reports/"
 
 ## License

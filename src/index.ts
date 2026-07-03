@@ -5,7 +5,7 @@
  * Tools for any MCP-compatible AI agent (Claude Desktop, Cursor, Cline, VS Code,
  * and others) to verify a photo's capture time and provenance:
  *   - verify_image: returns one verdict plus a typed, structured verdict object.
- *   - get_signed_report: writes the signed, timestamped PDF audit record.
+ *   - get_signed_report: writes the signed PDF audit record.
  *
  * Both wrap the ChronoVerify API (POST /v1/verify, POST /v1/report): cryptographic
  * C2PA Content Credentials validation against the official trust lists, EXIF and
@@ -38,6 +38,7 @@ interface VerifyArgs {
   url?: string;
   file_path?: string;
   image_base64?: string;
+  permalink?: boolean;
 }
 
 interface ReportArgs {
@@ -69,6 +70,7 @@ async function verifyImage(args: VerifyArgs): Promise<Record<string, any>> {
   } else {
     form.append("file", b64Blob(args.image_base64 as string), "image");
   }
+  if (args.permalink) form.append("permalink", "true");
   const headers: Record<string, string> = {};
   if (API_KEY) headers["Authorization"] = `Bearer ${API_KEY}`;
 
@@ -163,6 +165,13 @@ function toStructured(r: Record<string, any>): Record<string, any> {
       height: integ.height ?? null,
       c2pa_validator_enabled: !!integ.c2pa_validator_enabled,
     },
+    permalink: r.permalink
+      ? {
+          id: r.permalink.id ?? "",
+          url: r.permalink.url ?? "",
+          expires_at_utc: r.permalink.expires_at_utc ?? null,
+        }
+      : null,
     limits: r.limits ?? "",
     source: "ChronoVerify (https://chronoverify.com)",
   };
@@ -189,6 +198,10 @@ function summarize(r: Record<string, any>): string {
     lines.push("C2PA Content Credentials: none");
   }
   if (r.integrity?.sha256) lines.push(`SHA-256: ${r.integrity.sha256}`);
+  if (r.permalink?.url) {
+    const expiry = r.permalink.expires_at_utc ? ` (expires ${r.permalink.expires_at_utc})` : "";
+    lines.push(`Shareable verdict link: ${r.permalink.url}${expiry}`);
+  }
   lines.push("");
   lines.push(
     "Verified with ChronoVerify (https://chronoverify.com). Investigative triage, not proof: a clean result means the file's saved data is internally consistent, not that the scene it shows is real.",
@@ -197,18 +210,24 @@ function summarize(r: Record<string, any>): string {
   return lines.join("\n");
 }
 
-const server = new McpServer({ name: "chronoverify", version: "0.1.4" });
+const server = new McpServer({ name: "chronoverify", version: "0.1.5" });
 
 server.registerTool(
   "verify_image",
   {
     title: "Verify image provenance",
     description:
-      "Verify a photo's capture time and provenance: when it was captured, on what device and where, whether it carries valid C2PA Content Credentials, and whether it shows signs of editing. Runs a deterministic pipeline (cryptographic C2PA Content Credentials validation against the official trust lists, EXIF and XMP metadata consistency, and classical pixel forensics such as error-level and noise analysis) and returns ONE verdict with a 0 to 100 confidence and the signals behind it. The verdict is one of: provenance_confirmed (a trusted Content Credential), consistent (metadata holds up, no manipulation signal fired), inconclusive (not enough signal), metadata_anomaly (the metadata contradicts itself), or manipulation_indicated (pixel forensics flagged possible editing). Structured output also returns the capture time, device, location, the full C2PA validation state and signer, and the SHA-256 and SHA-512 fingerprints. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, EU AI Act Article 50 transparency checks, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. It validates provenance and is NOT a deepfake or AI-generation detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64. For a signed, timestamped PDF audit record of the result, use get_signed_report.",
+      "Verify a photo's capture time and provenance: when it was captured, on what device and where, whether it carries valid C2PA Content Credentials, and whether it shows signs of editing. Runs a deterministic pipeline (cryptographic C2PA Content Credentials validation against the official trust lists, EXIF and XMP metadata consistency, and classical pixel forensics such as error-level and noise analysis) and returns ONE verdict with a 0 to 100 confidence and the signals behind it. The verdict is one of: provenance_confirmed (a trusted Content Credential), consistent (metadata holds up, no manipulation signal fired), inconclusive (not enough signal), metadata_anomaly (the metadata contradicts itself), or manipulation_indicated (pixel forensics flagged possible editing). Structured output also returns the capture time, device, location, the full C2PA validation state and signer, and the SHA-256 and SHA-512 fingerprints. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, EU AI Act Article 50 transparency checks, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. It validates provenance and is NOT a deepfake or AI-generation detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64. Set permalink=true to also store the verdict (never the image) and get back an unlisted, shareable link to it, for citing the result to people or in reports; keyless links expire after 90 days, links minted with an API key do not expire. For a signed PDF audit record of the result, use get_signed_report.",
     inputSchema: {
       url: z.string().optional().describe("A publicly reachable image URL; the server fetches it."),
       file_path: z.string().optional().describe("Absolute path to a local image file to verify."),
       image_base64: z.string().optional().describe("Base64-encoded image bytes (no data: prefix)."),
+      permalink: z
+        .boolean()
+        .optional()
+        .describe(
+          "Also store the verdict (never the image) and return an unlisted, shareable link to it in the permalink field. Keyless links expire after 90 days; links minted with an API key do not expire.",
+        ),
     },
     outputSchema: {
       schema_version: z.string().describe("Response schema version, currently 'v1'."),
@@ -253,6 +272,17 @@ server.registerTool(
         height: z.number().nullable(),
         c2pa_validator_enabled: z.boolean(),
       }),
+      permalink: z
+        .object({
+          id: z.string(),
+          url: z.string().describe("Shareable, unlisted URL of this stored verdict."),
+          expires_at_utc: z
+            .string()
+            .nullable()
+            .describe("UTC expiry of the link; null for links minted with an API key, which do not expire."),
+        })
+        .nullable()
+        .describe("Present only when the request set permalink=true. The image itself is never stored."),
       limits: z.string().describe("Plain-language statement of what the verdict does and does not mean."),
       source: z.string().describe("Attribution string for the result."),
     },
@@ -279,7 +309,7 @@ server.registerTool(
   {
     title: "Get a signed provenance report",
     description:
-      "Generate a signed, timestamped PDF audit report for one image: the chain-of-custody record that captures the full verdict (capture time, the C2PA validation state and signer, metadata checks, pixel-forensic signals, and the SHA-256 and SHA-512 fingerprints) with an Ed25519 signature you can verify against the published key at /v1/key. Use this when you need a durable, shareable artifact of a verification rather than just a verdict: an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail. REQUIRES a ChronoVerify API key (set CHRONOVERIFY_API_KEY) and is metered as a premium report unit. Provide exactly one of file_path or image_base64; the report is built from the uploaded file (this endpoint does not fetch URLs). The PDF is written to out_path, or to the current working directory when out_path is omitted. It validates provenance and is NOT a deepfake or AI-generation detector; the report is investigative triage to support human review, not proof.",
+      "Generate a signed PDF audit report for one image: the chain-of-custody record that captures the full verdict (capture time, the C2PA validation state and signer, metadata checks, pixel-forensic signals, and the SHA-256 and SHA-512 fingerprints) with an Ed25519 signature you can verify against the published key at /v1/key. Use this when you need a durable, shareable artifact of a verification rather than just a verdict: an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail. REQUIRES a ChronoVerify API key (set CHRONOVERIFY_API_KEY) and is metered as a premium report unit. Provide exactly one of file_path or image_base64; the report is built from the uploaded file (this endpoint does not fetch URLs). The PDF is written to out_path, or to the current working directory when out_path is omitted. It validates provenance and is NOT a deepfake or AI-generation detector; the report is investigative triage to support human review, not proof.",
     inputSchema: {
       file_path: z.string().optional().describe("Absolute path to a local image file to report on."),
       image_base64: z.string().optional().describe("Base64-encoded image bytes (no data: prefix)."),

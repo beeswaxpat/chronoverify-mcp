@@ -7,12 +7,12 @@
     "source": "github"
   },
   "websiteUrl": "https://chronoverify.com",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "chronoverify-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },
