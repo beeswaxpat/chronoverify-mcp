@@ -210,7 +210,7 @@ function summarize(r: Record<string, any>): string {
   return lines.join("\n");
 }
 
-const server = new McpServer({ name: "chronoverify", version: "0.1.5" });
+const server = new McpServer({ name: "chronoverify", version: "0.1.6" });
 
 server.registerTool(
   "verify_image",
@@ -251,7 +251,7 @@ server.registerTool(
       }),
       c2pa: z.object({
         present: z.boolean().describe("Whether C2PA Content Credentials were found."),
-        validated: z.boolean().nullable().describe("True only when the signer is on a recognised trust list."),
+        validated: z.boolean().nullable().describe("True only when the signer is on a recognized trust list."),
         validation_state: z.string().nullable().describe("'Trusted', 'Valid', 'Invalid', or null when absent."),
         signature_valid: z.boolean().nullable(),
         trust_list_match: z.boolean().nullable(),
@@ -309,7 +309,7 @@ server.registerTool(
   {
     title: "Get a signed provenance report",
     description:
-      "Generate a signed PDF audit report for one image: the chain-of-custody record that captures the full verdict (capture time, the C2PA validation state and signer, metadata checks, pixel-forensic signals, and the SHA-256 and SHA-512 fingerprints) with an Ed25519 signature you can verify against the published key at /v1/key. Use this when you need a durable, shareable artifact of a verification rather than just a verdict: an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail. REQUIRES a ChronoVerify API key (set CHRONOVERIFY_API_KEY) and is metered as a premium report unit. Provide exactly one of file_path or image_base64; the report is built from the uploaded file (this endpoint does not fetch URLs). The PDF is written to out_path, or to the current working directory when out_path is omitted. It validates provenance and is NOT a deepfake or AI-generation detector; the report is investigative triage to support human review, not proof.",
+      "Generate a signed PDF audit report for one image: the chain-of-custody record that captures the full verdict (capture time, the C2PA validation state and signer, metadata checks, pixel-forensic signals, and the SHA-256 and SHA-512 fingerprints) with an Ed25519 signature you can verify against the published key at /v1/key, plus an embedded RFC 3161 trusted timestamp token verifiable offline with OpenSSL (the report labels it plainly if the timestamp authority was unreachable). Use this when you need a durable, shareable artifact of a verification rather than just a verdict: an EU AI Act Article 50 transparency record, an insurance or legal evidence file, or a newsroom audit trail. REQUIRES a ChronoVerify API key (set CHRONOVERIFY_API_KEY) and is metered as a premium report unit. Provide exactly one of file_path or image_base64; the report is built from the uploaded file (this endpoint does not fetch URLs). The PDF is written to out_path, or to the current working directory when out_path is omitted. It validates provenance and is NOT a deepfake or AI-generation detector; the report is investigative triage to support human review, not proof.",
     inputSchema: {
       file_path: z.string().optional().describe("Absolute path to a local image file to report on."),
       image_base64: z.string().optional().describe("Base64-encoded image bytes (no data: prefix)."),
