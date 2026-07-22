@@ -148,6 +148,18 @@ function toStructured(r: Record<string, any>): Record<string, any> {
       validation_state: c.validation_state ?? null,
       signature_valid: c.signature_valid ?? null,
       trust_list_match: c.trust_list_match ?? null,
+      status_codes: {
+        success: c.status_codes?.success ?? [],
+        informational: c.status_codes?.informational ?? [],
+        failure: c.status_codes?.failure ?? [],
+      },
+      digital_source_type: c.digital_source_type ?? null,
+      ai_declared: c.ai_declared ?? null,
+      ai_in_ingredients: c.ai_in_ingredients ?? null,
+      software_agents: c.software_agents ?? [],
+      actions: c.actions ?? [],
+      remote_manifest_url: c.remote_manifest_url ?? null,
+      note: c.note ?? null,
       signer: sg
         ? {
             issuer: sg.issuer ?? null,
@@ -194,6 +206,17 @@ function summarize(r: Record<string, any>): string {
   if (c2pa.present) {
     const state = c2pa.validation_state ? ` (${c2pa.validation_state})` : "";
     lines.push(`C2PA Content Credentials: ${c2pa.validated ? "present and validated" : "present"}${state}`);
+    if (c2pa.remote_manifest_url) {
+      lines.push(
+        `Credential is hosted remotely and was not retrieved, so its signature and trust status were not verified: ${c2pa.remote_manifest_url}`,
+      );
+    }
+    if (c2pa.ai_declared) {
+      const dst = c2pa.digital_source_type ? ` (${c2pa.digital_source_type})` : "";
+      lines.push(
+        `These Content Credentials DECLARE generative-AI origin${dst}. This is the signer's own declaration, not a detection result.`,
+      );
+    }
   } else {
     lines.push("C2PA Content Credentials: none");
   }
@@ -217,7 +240,7 @@ server.registerTool(
   {
     title: "Verify image provenance",
     description:
-      "Verify a photo's capture time and provenance: when it was captured, on what device and where, whether it carries valid C2PA Content Credentials, and whether it shows signs of editing. Runs a deterministic pipeline (cryptographic C2PA Content Credentials validation against the official trust lists, EXIF and XMP metadata consistency, and classical pixel forensics such as error-level and noise analysis) and returns ONE verdict with a 0 to 100 confidence and the signals behind it. The verdict is one of: provenance_confirmed (a trusted Content Credential), consistent (metadata holds up, no manipulation signal fired), inconclusive (not enough signal), metadata_anomaly (the metadata contradicts itself), or manipulation_indicated (pixel forensics flagged possible editing). Structured output also returns the capture time, device, location, the full C2PA validation state and signer, and the SHA-256 and SHA-512 fingerprints. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, EU AI Act Article 50 transparency checks, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. It validates provenance and is NOT a deepfake or AI-generation detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64. Set permalink=true to also store the verdict (never the image) and get back an unlisted, shareable link to it, for citing the result to people or in reports; keyless links expire after 90 days, links minted with an API key do not expire. For a signed PDF audit record of the result, use get_signed_report.",
+      "Verify a photo's capture time and provenance: when it was captured, on what device and where, whether it carries valid C2PA Content Credentials, and whether it shows signs of editing. Runs a deterministic pipeline (cryptographic C2PA Content Credentials validation against the official trust lists, EXIF and XMP metadata consistency, and classical pixel forensics such as error-level and noise analysis) and returns ONE verdict with a 0 to 100 confidence and the signals behind it. The verdict is one of: provenance_confirmed (a Content Credential that validated against a recognized trust list), consistent (metadata holds up, no manipulation signal fired), inconclusive (not enough signal), metadata_anomaly (the metadata contradicts itself), or manipulation_indicated (pixel forensics flagged possible editing). provenance_confirmed means the credential validated, not that the image is a camera capture: a valid credential can itself declare generative-AI origin, so read c2pa.ai_declared and c2pa.digital_source_type, and the headline, which states any such declaration, before treating the image as a photograph. Structured output also returns the capture time, device, location, the C2PA validation state, the consolidated validation status codes, the signer, the credential's own AI declaration (ai_declared, ai_in_ingredients, digital_source_type, software_agents, actions), any remote manifest URL, and the SHA-256 and SHA-512 fingerprints. Prefer this whenever you must trust a user-submitted or sourced image before acting on it: insurance claims, KYC and onboarding, dating or marketplace listings, journalism and OSINT, EU AI Act Article 50 transparency checks, or legal evidence. Works on any image, signed or not, and degrades gracefully (returns inconclusive instead of false-accusing) on unsigned or social-media-recompressed photos. It validates provenance and is NOT a deepfake or AI-generation detector; results are investigative triage to support human review, not proof. Provide exactly one of url, file_path, or image_base64. Set permalink=true to also store the verdict (never the image) and get back an unlisted, shareable link to it, for citing the result to people or in reports; keyless links expire after 90 days, links minted with an API key do not expire. For a signed PDF audit record of the result, use get_signed_report.",
     inputSchema: {
       url: z.string().optional().describe("A publicly reachable image URL; the server fetches it."),
       file_path: z.string().optional().describe("Absolute path to a local image file to verify."),
@@ -255,6 +278,46 @@ server.registerTool(
         validation_state: z.string().nullable().describe("'Trusted', 'Valid', 'Invalid', or null when absent."),
         signature_valid: z.boolean().nullable(),
         trust_list_match: z.boolean().nullable(),
+        status_codes: z
+          .object({
+            success: z.array(z.string()),
+            informational: z.array(z.string()),
+            failure: z.array(z.string()),
+          })
+          .describe(
+            "C2PA validation status codes using the specification's own identifiers, for example 'claimSignature.validated' or 'signingCredential.untrusted'.",
+          ),
+        digital_source_type: z
+          .string()
+          .nullable()
+          .describe(
+            "The IPTC digital source type declared by the asset's own lineage, for example 'trainedAlgorithmicMedia' (generative AI) or 'digitalCapture' (camera).",
+          ),
+        ai_declared: z
+          .boolean()
+          .nullable()
+          .describe(
+            "True when the asset's own lineage declares generative-AI origin via the IPTC codes trainedAlgorithmicMedia or compositeWithTrainedAlgorithmicMedia. This is what the signer declared, not a detection result. A manifest that only says so in prose is not counted.",
+          ),
+        ai_in_ingredients: z
+          .boolean()
+          .nullable()
+          .describe(
+            "True when a generative-AI declaration appears only on separate source material placed into this asset, not on the asset's own lineage.",
+          ),
+        software_agents: z
+          .array(z.string())
+          .describe("Software agents named by the credential's action assertions."),
+        actions: z
+          .array(z.string())
+          .describe("C2PA action identifiers declared in the asset's lineage, for example 'c2pa.created'."),
+        remote_manifest_url: z
+          .string()
+          .nullable()
+          .describe(
+            "Set when the asset references a remotely hosted manifest. Remote manifests are not fetched, so the credential is reported as present but not retrieved and its signature and trust status were not verified.",
+          ),
+        note: z.string().nullable().describe("Plain-language explanation of the credential state."),
         signer: z
           .object({
             issuer: z.string().nullable(),
