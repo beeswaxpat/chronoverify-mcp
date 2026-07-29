@@ -6,6 +6,10 @@ An [MCP](https://modelcontextprotocol.io) server for [ChronoVerify](https://chro
 
 Provenance-first, not a deepfake or AI-generation detector. Results are investigative triage to support human review, not proof.
 
+ChronoVerify is a C2PA Conformant Validator, listed on the C2PA Conforming Products List (record 019f8a20-6452-7a43-b11b-59d0b0e4a84a; validation of JPEG, PNG, WebP, and AVIF). Details: https://chronoverify.com/compliance#conformance
+
+Source and issues: [github.com/beeswaxpat/chronoverify-mcp](https://github.com/beeswaxpat/chronoverify-mcp)
+
 > **Get an API key** (the first 100 verifications each month are included): https://chronoverify.com/pricing . Without a key, `verify_image` uses the free, rate-limited public path. A signed report requires a key.
 
 ## Install
