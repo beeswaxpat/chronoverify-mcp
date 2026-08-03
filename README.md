@@ -1,6 +1,6 @@
 # chronoverify-mcp
 
-[![chronoverify-mcp MCP server](https://glama.ai/mcp/servers/beeswaxpat/chronoverify-mcp/badges/score.svg)](https://glama.ai/mcp/servers/beeswaxpat/chronoverify-mcp)
+[![chronoverify-mcp MCP server](https://glama.ai/mcp/servers/beeswaxpat/chronoverify-mcp/badges/score.svg)](https://glama.ai/mcp/servers/beeswaxpat/chronoverify-mcp) [![smithery badge](https://smithery.ai/badge/beeswaxpat/chronoverify-mcp)](https://smithery.ai/servers/beeswaxpat/chronoverify-mcp)
 
 An [MCP](https://modelcontextprotocol.io) server for [ChronoVerify](https://chronoverify.com). It gives any MCP-compatible AI agent (Claude Desktop, Cursor, Cline, VS Code, and others) the tools to check a photo's capture time and provenance: C2PA Content Credentials, EXIF and XMP metadata, and classical pixel forensics, fused into one verdict (`provenance_confirmed`, `consistent`, `inconclusive`, `metadata_anomaly`, or `manipulation_indicated`) with a 0 to 100 confidence.
 
