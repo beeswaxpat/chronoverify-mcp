@@ -10,6 +10,8 @@ ChronoVerify is a C2PA Conformant Validator, listed on the C2PA Conforming Produ
 
 Source and issues: [github.com/beeswaxpat/chronoverify-mcp](https://github.com/beeswaxpat/chronoverify-mcp)
 
+Listed on Smithery: https://smithery.ai/servers/beeswaxpat/chronoverify-mcp
+
 > **Get an API key** (the first 100 verifications each month are included): https://chronoverify.com/pricing . Without a key, `verify_image` uses the free, rate-limited public path. A signed report requires a key.
 
 ## Install
